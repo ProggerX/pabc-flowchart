@@ -63,15 +63,50 @@ func parseAssign(id string, s string) (string, string, []string) {
 }
 
 func parseFor(id string, s string) (string, string, []string) {
-
+	o := []string{}
+	rx := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
+	name := rx.FindStringSubmatch(s)[2]
+	val := rx.FindStringSubmatch(s)[3]
+	end_val := rx.FindStringSubmatch(s)[5]
+	to_or_downto := rx.FindStringSubmatch(s)[4]
+	is_neg := to_or_downto == "downto"
+	log.Debug("FOR", "id", id, "name", name)
+	log.Debug("FOR", "id", id, "val", val)
+	log.Debug("FOR", "id", id, "end_val", end_val)
+	log.Debug("FOR", "id", id, "is_neg", is_neg)
+	o = append(o, fmt.Sprintf("%s[\"Присвоить %s значение %s\"]", id+"assign", name, val))
+	var r string
+	step := 1
+	if is_neg {
+		r = fmt.Sprintf("%s{\"%s >= %s ?\"}", id, name, end_val)
+	} else {
+		r = fmt.Sprintf("%s{\"%s <= %s ?\"}", id, name, end_val)
+	}
+	if rx.FindStringSubmatch(s)[7] != "" {
+		step, _ = strconv.Atoi(rx.FindStringSubmatch(s)[7])
+	}
+	o = append(o, r)
+	o = append(o, fmt.Sprintf("%s-->%s", id+"assign", id))
+	if is_neg {
+		r = fmt.Sprintf("%s[\"Присвоить %s значение %s - %d\"]", id+"change", name, name, step)
+	} else {
+		r = fmt.Sprintf("%s[\"Присвоить %s значение %s + %d\"]", id+"change", name, name, step)
+	}
+	o = append(o, r)
+	o = append(o, fmt.Sprintf("%s-->|тогда|%s", id, id+"change"))
+	op_bid, op_eid, op_r := parseOperator(id+"body", rx.FindStringSubmatch(s)[8])
+	o = append(o, op_r...)
+	o = append(o, fmt.Sprintf("%s-->%s", id+"change", op_bid))
+	o = append(o, fmt.Sprintf("%s-->%s", op_eid, id))
+	return id + "assign", id, o
 }
 
 func parseOperator(id string, s string) (string, string, []string) {
 	rx_block := regexp.MustCompile(`^begin +(.+) +end`)
 	rx_if_else := regexp.MustCompile(`^if +(.+) +then +(.+) else +(.+)`)
 	rx_if := regexp.MustCompile(`^if +(.+) +then +(.+)`)
-	rx_assign := regexp.MustCompile(`^(.+) +(\+|-|\*|\/|:)= +(.+)`)
-	rx_for := regexp.MustCompile(`^for +(var)? +(.+) +:= +(.+) +(to|downto) +do`)
+	rx_assign := regexp.MustCompile(`^(\w+) +(\+|-|\*|\/|:)= +(.+)`)
+	rx_for := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
 	is_block := rx_block.MatchString(s)
 	is_if_else := rx_if_else.MatchString(s)
 	is_if := rx_if.MatchString(s)
@@ -124,8 +159,8 @@ func parseBlock(id string, s string) (string, string, []string) {
 		o = append(o, fmt.Sprintf("%s-->%s", prev_eid, o_bid))
 		prev_eid = o_eid
 	}
-	o = append(o, eid+"([Конец блока])")
 	o = append(o, fmt.Sprintf("%s-->%s", prev_eid, eid))
+	o = append(o, eid+"([Конец блока])")
 	return bid, eid, o
 }
 
@@ -134,7 +169,9 @@ func parseMainBlock(s string) []string {
 	s = rx.FindStringSubmatch(s)[1]
 	s = strings.TrimSpace(s)
 	log.Debug("MAIN_BLOCK", "s", s)
-	_, _, o := parseBlock("mb", s)
+	bid, eid, o := parseBlock("mb", s)
+	o[0] = fmt.Sprintf("%s([НАЧАЛО])", bid)
+	o[len(o)-1] = fmt.Sprintf("%s([КОНЕЦ])", eid)
 	return o
 }
 

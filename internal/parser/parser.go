@@ -9,111 +9,21 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-func parseIfElse(id string, s string) (string, string, []string) {
-	rx := regexp.MustCompile(`if +(.+) +then +(.+) +else +(.+)`)
-	cond := rx.FindStringSubmatch(s)[1]
-	then := rx.FindStringSubmatch(s)[2]
-	els := rx.FindStringSubmatch(s)[3]
-	log.Debug("IF_ELSE", "id", id, "cond", cond)
-	log.Debug("IF_ELSE", "id", id, "then", then)
-	log.Debug("IF_ELSE", "id", id, "else", els)
-	o := []string{}
-	o = append(o, fmt.Sprintf("%s{\"%s ?\"}", id, cond))
-	then_bid, then_eid, then_r := parseOperator(id+"then", then)
-	else_bid, else_eid, else_r := parseOperator(id+"else", els)
-	o = append(o, then_r...)
-	o = append(o, else_r...)
-	o = append(o, fmt.Sprintf("%s-->|тогда|%s", id, then_bid))
-	o = append(o, fmt.Sprintf("%s-->|иначе|%s", id, else_bid))
-	o = append(o, fmt.Sprintf("%s-->%s", else_eid, id+"end"))
-	o = append(o, fmt.Sprintf("%s-->%s", then_eid, id+"end"))
-	o = append(o, fmt.Sprintf("%s[Конец условия]", id+"end"))
-	return id, id + "end", o
-}
-
-func parseIf(id string, s string) (string, string, []string) {
-	rx := regexp.MustCompile(`if +(.+) +then +(.+)`)
-	cond := rx.FindStringSubmatch(s)[1]
-	then := rx.FindStringSubmatch(s)[2]
-	log.Debug("IF", "id", id, "cond", cond)
-	log.Debug("IF", "id", id, "then", then)
-	o := []string{}
-	o = append(o, fmt.Sprintf("%s{\"%s ?\"}", id, cond))
-	then_bid, then_eid, then_r := parseOperator(id+"then", then)
-	o = append(o, then_r...)
-	o = append(o, fmt.Sprintf("%s-->|тогда|%s", id, then_bid))
-	o = append(o, fmt.Sprintf("%s-->|иначе|%s", id, id+"end"))
-	o = append(o, fmt.Sprintf("%s-->%s", then_eid, id+"end"))
-	o = append(o, fmt.Sprintf("%s[Конец условия]", id+"end"))
-	return id, id + "end", o
-}
-
-func parseAssign(id string, s string) (string, string, []string) {
-	rx := regexp.MustCompile(`^(.+) +(\+|-|\*|\/|:)= +(.+)`)
-	name := rx.FindStringSubmatch(s)[1]
-	oper := rx.FindStringSubmatch(s)[2]
-	val := rx.FindStringSubmatch(s)[3]
-	log.Debug("ASSIGN", "id", id, "name", name)
-	log.Debug("ASSIGN", "id", id, "oper", oper)
-	log.Debug("ASSIGN", "id", id, "val", val)
-	if oper == ":" {
-		return id, id, []string{fmt.Sprintf("%s[\"Присвоить %s значение %s\"]", id, name, val)}
-	}
-	return id, id, []string{fmt.Sprintf("%s[\"Присвоить %s значение %s %s %s\"]", id, name, name, oper, val)}
-}
-
-func parseFor(id string, s string) (string, string, []string) {
-	o := []string{}
-	rx := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
-	name := rx.FindStringSubmatch(s)[2]
-	val := rx.FindStringSubmatch(s)[3]
-	end_val := rx.FindStringSubmatch(s)[5]
-	to_or_downto := rx.FindStringSubmatch(s)[4]
-	is_neg := to_or_downto == "downto"
-	log.Debug("FOR", "id", id, "name", name)
-	log.Debug("FOR", "id", id, "val", val)
-	log.Debug("FOR", "id", id, "end_val", end_val)
-	log.Debug("FOR", "id", id, "is_neg", is_neg)
-	o = append(o, fmt.Sprintf("%s[\"Присвоить %s значение %s\"]", id+"assign", name, val))
-	var r string
-	step := 1
-	if is_neg {
-		r = fmt.Sprintf("%s{\"%s >= %s ?\"}", id, name, end_val)
-	} else {
-		r = fmt.Sprintf("%s{\"%s <= %s ?\"}", id, name, end_val)
-	}
-	if rx.FindStringSubmatch(s)[7] != "" {
-		step, _ = strconv.Atoi(rx.FindStringSubmatch(s)[7])
-	}
-	o = append(o, r)
-	o = append(o, fmt.Sprintf("%s-->%s", id+"assign", id))
-	if is_neg {
-		r = fmt.Sprintf("%s[\"Присвоить %s значение %s - %d\"]", id+"change", name, name, step)
-	} else {
-		r = fmt.Sprintf("%s[\"Присвоить %s значение %s + %d\"]", id+"change", name, name, step)
-	}
-	o = append(o, r)
-	o = append(o, fmt.Sprintf("%s-->|тогда|%s", id, id+"change"))
-	op_bid, op_eid, op_r := parseOperator(id+"body", rx.FindStringSubmatch(s)[8])
-	o = append(o, op_r...)
-	o = append(o, fmt.Sprintf("%s-->%s", id+"change", op_bid))
-	o = append(o, fmt.Sprintf("%s-->%s", op_eid, id))
-	return id + "assign", id, o
-}
-
 func parseOperator(id string, s string) (string, string, []string) {
 	rx_block := regexp.MustCompile(`^begin +(.+) +end`)
 	rx_if_else := regexp.MustCompile(`^if +(.+) +then +(.+) else +(.+)`)
 	rx_if := regexp.MustCompile(`^if +(.+) +then +(.+)`)
 	rx_assign := regexp.MustCompile(`^(\w+) +(\+|-|\*|\/|:)= +(.+)`)
 	rx_for := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
-	rx_read_write := regexp.MustCompile(`^(write|read)(ln)?\((.*)\)`)
+	rx_read_write := regexp.MustCompile(`^(write|read)(ln)?(\((.*)\))?`)
+	rx_while := regexp.MustCompile(`^while +(.+) +(.+)`)
 	is_block := rx_block.MatchString(s)
 	is_if_else := rx_if_else.MatchString(s)
 	is_if := rx_if.MatchString(s)
 	is_assign := rx_assign.MatchString(s)
 	is_for := rx_for.MatchString(s)
 	is_read_write := rx_read_write.MatchString(s)
+	is_while := rx_while.MatchString(s)
 	if is_block {
 		return parseBlock(id+"b", rx_block.FindStringSubmatch(s)[1])
 	}
@@ -132,41 +42,10 @@ func parseOperator(id string, s string) (string, string, []string) {
 	if is_read_write {
 		return id, id, []string{fmt.Sprintf("%s[/\"%s\"/]", id, s)}
 	}
+	if is_while {
+		return parseWhile(id+"wh", s)
+	}
 	return id, id, []string{fmt.Sprintf("%s[\"%s\"]", id, s)}
-}
-
-func parseBlock(id string, s string) (string, string, []string) {
-	bid := id + "beg"
-	eid := id + "end"
-	o := []string{bid + "([Начало блока])"}
-	scope := 0
-	ops := []string{}
-	left := 0
-	for i := 0; i < len(s); i++ {
-		l := s[i:]
-		if strings.HasPrefix(l, "begin ") {
-			scope++
-		} else if strings.HasPrefix(l, "end") {
-			scope--
-		}
-		if l[0] == ';' && scope == 0 {
-			ops = append(ops, s[left:i])
-			left = i + 1
-		}
-	}
-	log.Debug("BLOCK", "id", id, "len(ops)", len(ops))
-	prev_eid := bid
-	for i := 0; i < len(ops); i++ {
-		ops[i] = strings.TrimSpace(ops[i])
-		log.Debug("BLOCK", "id", id, "i", i, "ops[i]", ops[i])
-		o_bid, o_eid, o_r := parseOperator(id+strconv.Itoa(i), ops[i])
-		o = append(o, o_r...)
-		o = append(o, fmt.Sprintf("%s-->%s", prev_eid, o_bid))
-		prev_eid = o_eid
-	}
-	o = append(o, fmt.Sprintf("%s-->%s", prev_eid, eid))
-	o = append(o, eid+"([Конец блока])")
-	return bid, eid, o
 }
 
 func parseMainBlock(s string) []string {

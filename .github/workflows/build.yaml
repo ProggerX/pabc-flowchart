@@ -20,3 +20,14 @@ jobs:
           path: |
             ./pabc-parse-windows.exe
             ./pabc-parse-linux
+  vet:
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+      - run: go vet ./cmd/pabc-parse
+      - run: go vet ./internal/extra
+      - run: go vet ./internal/parser

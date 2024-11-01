@@ -1,0 +1,22 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+      - run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ./cmd/pabc-parse
+      - run: CGO_ENABLED=0 go build ./cmd/pabc-parse
+      - run: mv ./pabc-parse.exe ./pabc-parse-windows.exe
+      - run: mv ./pabc-parse ./pabc-parse-linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pabc-parse
+          path: |
+            ./pabc-parse-windows.exe
+            ./pabc-parse-linux

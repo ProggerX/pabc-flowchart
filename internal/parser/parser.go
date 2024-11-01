@@ -107,11 +107,13 @@ func parseOperator(id string, s string) (string, string, []string) {
 	rx_if := regexp.MustCompile(`^if +(.+) +then +(.+)`)
 	rx_assign := regexp.MustCompile(`^(\w+) +(\+|-|\*|\/|:)= +(.+)`)
 	rx_for := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
+	rx_read_write := regexp.MustCompile(`^(write|read)(ln)?\((.*)\)`)
 	is_block := rx_block.MatchString(s)
 	is_if_else := rx_if_else.MatchString(s)
 	is_if := rx_if.MatchString(s)
 	is_assign := rx_assign.MatchString(s)
 	is_for := rx_for.MatchString(s)
+	is_read_write := rx_read_write.MatchString(s)
 	if is_block {
 		return parseBlock(id+"b", rx_block.FindStringSubmatch(s)[1])
 	}
@@ -126,6 +128,9 @@ func parseOperator(id string, s string) (string, string, []string) {
 	}
 	if is_for {
 		return parseFor(id+"for", s)
+	}
+	if is_read_write {
+		return id, id, []string{fmt.Sprintf("%s[/\"%s\"/]", id, s)}
 	}
 	return id, id, []string{fmt.Sprintf("%s[\"%s\"]", id, s)}
 }

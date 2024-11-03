@@ -25,7 +25,7 @@ func parseIf(id string, s string) (string, string, []string) {
 }
 
 func parseIfElse(id string, s string) (string, string, []string) {
-	rx := regexp.MustCompile(`if +(.+) +then +(.+) +else +(.+)`)
+	rx := regexp.MustCompile(`^if +(.+?) +then +((begin +)?.+(end *)?) +else +(.+)`)
 	cond := rx.FindStringSubmatch(s)[1]
 	then := rx.FindStringSubmatch(s)[2]
 	els := rx.FindStringSubmatch(s)[3]

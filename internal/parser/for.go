@@ -10,7 +10,7 @@ import (
 
 func parseFor(id string, s string) (string, string, []string) {
 	o := []string{}
-	rx := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
+	rx := regexp.MustCompile(`^for +(var +)?(.+) *:= *(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
 	name := rx.FindStringSubmatch(s)[2]
 	val := rx.FindStringSubmatch(s)[3]
 	end_val := rx.FindStringSubmatch(s)[5]

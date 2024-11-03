@@ -8,7 +8,7 @@ import (
 )
 
 func parseAssign(id string, s string) (string, string, []string) {
-	rx := regexp.MustCompile(`^(.+) +(\+|-|\*|\/|:)= +(.+)`)
+	rx := regexp.MustCompile(`^(.+) *(\+|-|\*|\/|:)= *(.+)`)
 	name := rx.FindStringSubmatch(s)[1]
 	oper := rx.FindStringSubmatch(s)[2]
 	val := rx.FindStringSubmatch(s)[3]

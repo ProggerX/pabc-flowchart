@@ -11,7 +11,7 @@ import (
 
 func parseOperator(id string, s string) (string, string, []string) {
 	rx_block := regexp.MustCompile(`^begin +(.+) +end`)
-	rx_if_else := regexp.MustCompile(`^if +(.+) +then +(.+) else +(.+)`)
+	rx_if_else := regexp.MustCompile(`^if +(.+?) +then +((begin +)?.+(end *)?) +else +(.+)`)
 	rx_if := regexp.MustCompile(`^if +(.+) +then +(.+)`)
 	rx_assign := regexp.MustCompile(`^(\w+) +(\+|-|\*|\/|:)= +(.+)`)
 	rx_for := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
@@ -49,8 +49,6 @@ func parseOperator(id string, s string) (string, string, []string) {
 }
 
 func parseMainBlock(s string) []string {
-	rx := regexp.MustCompile(`begin(.*)end\.`)
-	s = rx.FindStringSubmatch(s)[1]
 	s = strings.TrimSpace(s)
 	log.Debug("MAIN_BLOCK", "s", s)
 	bid, eid, o := parseBlock("mb", s)
@@ -61,10 +59,9 @@ func parseMainBlock(s string) []string {
 
 func parseVarBlock(s string) []string {
 	o := []string{}
-	rx := regexp.MustCompile(`begin.*end\.`)
-	s = rx.ReplaceAllString(s, "")
 	s = strings.TrimSpace(s)
-	s = strings.TrimPrefix(s, "var ")
+	rx := regexp.MustCompile(`var +(((.+) *: *(.+) *; *)+) +begin`)
+	s = rx.FindStringSubmatch(s)[1]
 	log.Debug("VAR_BLOCK", "s", s)
 	vars := strings.Split(s, ";")
 	vars = vars[:len(vars)-1]
@@ -78,6 +75,7 @@ func parseVarBlock(s string) []string {
 			idnext := "var" + strconv.Itoa(i+1)
 			o = append(o, fmt.Sprintf("%s-->%s", id, idnext))
 		}
+		log.Debug("VAR", "name", name, "type", typ)
 		o = append(o, fmt.Sprintf("%s[Объявить %s типа %s]", id, name, typ))
 	}
 	return o
@@ -93,12 +91,17 @@ func ParseFile(lines []string) []string {
 
 func parseCode(s string) []string {
 	o := []string{"flowchart TB"}
+	s = strings.ToLower(s)
 	s = strings.TrimSpace(s)
+	s = strings.Trim(s, "\r")
 	log.Debug("CODE", "s", s)
-	if strings.HasPrefix(s, "var") {
+	var_rx := regexp.MustCompile(`var +(((.+) *: *(.+) *; *)+) +begin`)
+	if var_rx.MatchString(s) {
 		o = append(o, parseVarBlock(s)...)
 	}
-	o = append(o, parseMainBlock(s)...)
+	mb_rx := regexp.MustCompile(`begin(.*)end\.`)
+	log.Debug("MAINBLOCK", "len", len(mb_rx.FindStringSubmatch(s)))
+	o = append(o, parseMainBlock(mb_rx.FindStringSubmatch(s)[1])...)
 
 	return o
 }

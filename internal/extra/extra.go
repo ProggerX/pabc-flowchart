@@ -15,6 +15,7 @@ func ReadLines(filename string) ([]string, error) {
 	lines := strings.Split(str, "\n")
 	for i := 0; i < len(lines); i++ {
 		lines[i] = strings.TrimSpace(lines[i])
+		lines[i] = strings.Trim(lines[i], "\r")
 	}
 	return lines, nil
 }

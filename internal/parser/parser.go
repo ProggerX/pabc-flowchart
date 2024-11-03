@@ -7,11 +7,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"go.arsenm.dev/pcre"
 )
 
 func parseOperator(id string, s string) (string, string, []string) {
 	rx_block := regexp.MustCompile(`^begin +(.+) +end`)
-	rx_if_else := regexp.MustCompile(`^if +(.+?) +then +((begin +)?.+(end *)?) +else +(.+)`)
+	// ^if +(.+?) +then +((begin *)*.*?(if.*?else)*.*?( *end)*) +else +(.+)
+	rx_if_else := pcre.MustCompile(`^(?=.*if)(?=.*else).*`)
 	rx_if := regexp.MustCompile(`^if +(.+) +then +(.+)`)
 	rx_assign := regexp.MustCompile(`^(\w+) +(\+|-|\*|\/|:)= +(.+)`)
 	rx_for := regexp.MustCompile(`^for +(var +)?(.+) +:= +(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)

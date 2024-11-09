@@ -30,4 +30,4 @@ jobs:
         uses: actions/setup-go@v5
       - run: go vet ./cmd/pabc-parse
       - run: go vet ./internal/extra
-      - run: go vet ./internal/parser
+      - run: go vet ./pkg/parser

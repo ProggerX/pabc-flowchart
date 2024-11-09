@@ -17,7 +17,7 @@ func parseBlock(id string, s string) (string, string, []string) {
 	left := 0
 	for i := 0; i < len(s); i++ {
 		l := s[i:]
-		if strings.HasPrefix(l, "begin ") {
+		if strings.HasPrefix(l, "begin ") || strings.HasPrefix(l, "begin;") {
 			scope++
 		} else if strings.HasPrefix(l, "end") {
 			scope--
@@ -26,6 +26,14 @@ func parseBlock(id string, s string) (string, string, []string) {
 			ops = append(ops, s[left:i])
 			left = i + 1
 		}
+	}
+	if s[len(s)-1] != ';' {
+		var i int
+		for i = len(s) - 1; s[i] != ';'; i-- {
+		}
+		last := s[i+2:]
+		log.Debug("BLOCK", "id", id, "last_op", last)
+		ops = append(ops, last)
 	}
 	log.Debug("BLOCK", "id", id, "len(ops)", len(ops))
 	prev_eid := bid

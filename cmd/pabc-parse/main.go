@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/ProggerX/pabc-flowchart/internal/extra"
-	"github.com/ProggerX/pabc-flowchart/internal/parser"
+	"github.com/ProggerX/pabc-flowchart/pkg/parser"
 	"github.com/charmbracelet/log"
 )
 

@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -57,28 +56,9 @@ func parseMainBlock(s string) []string {
 	return o
 }
 
-func parseVarBlock(s string) []string {
-	o := []string{}
-	s = strings.TrimSpace(s)
-	rx := regexp.MustCompile(`var +(((.+) *: *(.+) *; *)+) +begin`)
-	s = rx.FindStringSubmatch(s)[1]
-	log.Debug("VAR_BLOCK", "s", s)
-	vars := strings.Split(s, ";")
-	vars = vars[:len(vars)-1]
-	for i := 0; i < len(vars); i++ {
-		rx1 := regexp.MustCompile(`.* *:`)
-		rx2 := regexp.MustCompile(`: *.*`)
-		name := strings.Trim(rx1.FindString(vars[i]), " :")
-		typ := strings.Trim(rx2.FindString(vars[i]), " :")
-		id := "var" + strconv.Itoa(i)
-		if i < len(vars)-1 {
-			idnext := "var" + strconv.Itoa(i+1)
-			o = append(o, fmt.Sprintf("%s-->%s", id, idnext))
-		}
-		log.Debug("VAR", "name", name, "type", typ)
-		o = append(o, fmt.Sprintf("%s[Объявить %s типа %s]", id, name, typ))
-	}
-	return o
+func parsePreMain(string) []string {
+	log.Debug("PreMain is not supported in this version")
+	return []string{""}
 }
 
 func ParseFile(lines []string) []string {
@@ -89,19 +69,37 @@ func ParseFile(lines []string) []string {
 	return parseCode(strings.Join(lines, " "))
 }
 
+func findMainBlock(s string) (int, int) {
+	end := strings.Index(s, "end.") + 3
+	scope := 0
+	for i := end; i >= 0; i-- {
+		l := s[i:]
+		if strings.HasPrefix(l, "end ") || strings.HasPrefix(l, "end;") {
+			scope++
+		} else if strings.HasPrefix(l, "begin ") || strings.HasPrefix(l, "begin;") {
+			if scope == 0 {
+				return i, end
+			}
+			scope--
+		}
+	}
+	return 0, end
+}
+
 func parseCode(s string) []string {
 	o := []string{"flowchart TB"}
 	s = strings.ToLower(s)
 	s = strings.TrimSpace(s)
 	s = strings.Trim(s, "\r")
 	log.Debug("CODE", "s", s)
-	var_rx := regexp.MustCompile(`var +(((.+) *: *(.+) *; *)+) +begin`)
-	if var_rx.MatchString(s) {
-		o = append(o, parseVarBlock(s)...)
+	premain_rx := regexp.MustCompile(`(.*?) +begin`)
+	if premain_rx.MatchString(s) {
+		o = append(o, parsePreMain(premain_rx.FindStringSubmatch(s)[1])...)
 	}
+	beg, end := findMainBlock(s)
+	mb_s := s[beg:(end + 1)]
 	mb_rx := regexp.MustCompile(`begin(.*)end\.`)
-	log.Debug("MAINBLOCK", "len", len(mb_rx.FindStringSubmatch(s)))
-	o = append(o, parseMainBlock(mb_rx.FindStringSubmatch(s)[1])...)
+	o = append(o, parseMainBlock(mb_rx.FindStringSubmatch(mb_s)[1])...)
 
 	return o
 }

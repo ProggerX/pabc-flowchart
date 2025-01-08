@@ -10,12 +10,14 @@ import (
 
 func parseOperator(id string, s string) (string, string, []string) {
 	s = strings.TrimSpace(s)
+
 	rx_block := regexp.MustCompile(`^begin;* +(.+) +end`)
 	rx_if := regexp.MustCompile(`^if +(.+) +then +(.+)`)
 	rx_assign := regexp.MustCompile(`^(\w+) +(\+|-|\*|\/|:)= +(.+)`)
 	rx_for := regexp.MustCompile(`^for +(var +)?(.+) *:= *(.+) +(to|downto) +(.+?)( +step +(.+))? +do +(.+)`)
 	rx_read_write := regexp.MustCompile(`^(write|read)(ln)?(\((.*)\))?`)
 	rx_while := regexp.MustCompile(`^while +(.+) +(.+)`)
+
 	is_block := rx_block.MatchString(s)
 	is_if_else := detectIfElse(s)
 	is_if := rx_if.MatchString(s)
@@ -23,6 +25,7 @@ func parseOperator(id string, s string) (string, string, []string) {
 	is_for := rx_for.MatchString(s)
 	is_read_write := rx_read_write.MatchString(s)
 	is_while := rx_while.MatchString(s)
+
 	if is_block {
 		return parseBlock(id+"b", rx_block.FindStringSubmatch(s)[1])
 	}
